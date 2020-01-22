@@ -26,6 +26,7 @@ tf
 sensor_msgs
 dynamic_reconfigure
 message_generation
+tf2
 )
 
 find_package(OpenCV 3.0 QUIET)
@@ -146,8 +147,11 @@ ${LIBS_ROS}
 add_executable (${PROJECT_NAME}_rgbd
 ros/src/RGBDNode.cc
 ros/src/Node.cc
+
 )
+#add_executable (${PROJECT_NAME}_rgbd_drone_pose ros/src/drone_pose.cpp)
 add_dependencies (${PROJECT_NAME}_rgbd ${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
+
 
 target_link_libraries(${PROJECT_NAME}_rgbd
 ${LIBS_ROS}

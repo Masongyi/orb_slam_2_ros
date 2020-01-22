@@ -127,7 +127,14 @@ public:
 
     cv::Mat DrawCurrentFrame ();
 
+    int GetTracked() const;
+
     std::vector<MapPoint*> GetAllMapPoints();
+
+    std::vector<KeyFrame*> GetAllKeyFrames()
+    {
+        return mpMap->GetAllKeyFrames();
+    }
 
 private:
     bool SetCallStackSize (const rlim_t kNewStackSize);

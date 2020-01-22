@@ -493,6 +493,11 @@ cv::Mat System::DrawCurrentFrame () {
   return mpFrameDrawer->DrawFrame();
 }
 
+int System::GetTracked() const
+{
+    return mpFrameDrawer->GetTracked();
+}
+
 std::vector<MapPoint*> System::GetAllMapPoints() {
   return mpMap->GetAllMapPoints();
 }

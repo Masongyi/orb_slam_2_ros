@@ -31,7 +31,7 @@
 
 #include <dynamic_reconfigure/server.h>
 #include <orb_slam2_ros/dynamic_reconfigureConfig.h>
-
+//#include "Tracking.h"
 #include "orb_slam2_ros/SaveMap.h"
 
 #include <message_filters/subscriber.h>
@@ -40,7 +40,9 @@
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PoseStamped.h>
-
+#include <std_msgs/Int32.h>
+#include <geometry_msgs/PoseArray.h>
+#include <std_msgs/Bool.h>
 #include "System.h"
 
 
@@ -61,6 +63,10 @@ class Node
     void PublishMapPoints (std::vector<ORB_SLAM2::MapPoint*> map_points);
     void PublishPositionAsTransform (cv::Mat position);
     void PublishPositionAsPoseStamped(cv::Mat position);
+    void PublishMatches(int num_matches);
+    void PublishKeyframes(std::vector<ORB_SLAM2::KeyFrame*> key_frames);
+    //void PublishDronePose(cv::Mat drone_position);
+    //void PublishTrackingState(int state);
     void PublishRenderedImage (cv::Mat image);
     void ParamsChangedCallback(orb_slam2_ros::dynamic_reconfigureConfig &config, uint32_t level);
     bool SaveMapSrv (orb_slam2_ros::SaveMap::Request &req, orb_slam2_ros::SaveMap::Response &res);
@@ -73,7 +79,10 @@ class Node
     image_transport::Publisher rendered_image_publisher_;
     ros::Publisher map_points_publisher_;
     ros::Publisher pose_publisher_;
-
+    ros::Publisher matches_publisher_;
+    ros::Publisher key_frames_publisher_;
+    ros::Publisher tracking_state_publisher_;
+    //ros::Publisher drone_pose_publisher_;
     ros::ServiceServer service_server_;
 
     std::string name_of_node_;

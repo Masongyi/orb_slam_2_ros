@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+
 Node::Node (ORB_SLAM2::System::eSensor sensor, ros::NodeHandle &node_handle, image_transport::ImageTransport &image_transport) {
   name_of_node_ = ros::this_node::getName();
   node_handle_ = node_handle;
@@ -31,9 +32,14 @@ Node::Node (ORB_SLAM2::System::eSensor sensor, ros::NodeHandle &node_handle, ima
     map_points_publisher_ = node_handle_.advertise<sensor_msgs::PointCloud2> (name_of_node_+"/map_points", 1);
   }
 
-  // Enable publishing camera's pose as PoseStamped message
+    // Enable publishing camera's pose as PoseStamped message
   if (publish_pose_param_) {
-    pose_publisher_ = node_handle_.advertise<geometry_msgs::PoseStamped> (name_of_node_+"/pose", 1);
+    pose_publisher_ = node_handle_.advertise<geometry_msgs::PoseStamped> (name_of_node_+"/pose", 1);// Enable publishing camera's pose as PoseStamped message
+    matches_publisher_ = node_handle_.advertise<std_msgs::Int32>(name_of_node_+"/matches",1);
+    key_frames_publisher_ = node_handle_.advertise<geometry_msgs::PoseArray>(name_of_node_+"/key_frames",1);
+    //drone_pose_publisher = node_handle_.advertise<geometry_msgs::PoseStamped> (name_of_node_+"/drone_pose", 1);//Enable publishing drone's pose as PoseStamped message
+    //tracking_state_publisher_ = node_handle_.advertise<std_msgs::Bool>(name_of_node_+"/tracking_state",1);
+
   }
 
 }
@@ -53,11 +59,15 @@ Node::~Node () {
 void Node::Update () {
   cv::Mat position = orb_slam_->GetCurrentPosition();
 
+
   if (!position.empty()) {
     PublishPositionAsTransform (position);
 
     if (publish_pose_param_) {
       PublishPositionAsPoseStamped (position);
+      PublishMatches(orb_slam_->GetTracked());
+      PublishKeyframes(orb_slam_->GetAllKeyFrames());
+      //PublishTrackingState(orb_slam_->GetTrackingState());
     }
   }
 
@@ -66,7 +76,7 @@ void Node::Update () {
   if (publish_pointcloud_param_) {
     PublishMapPoints (orb_slam_->GetAllMapPoints());
   }
-
+  
 }
 
 
@@ -78,6 +88,18 @@ void Node::PublishMapPoints (std::vector<ORB_SLAM2::MapPoint*> map_points) {
 
 void Node::PublishPositionAsTransform (cv::Mat position) {
   tf::Transform transform = TransformFromMat (position);
+  
+  tf::Matrix3x3 m(transform.getRotation());
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+  tf::Quaternion q;
+  q.setRPY(roll - (M_PI / 2.0), pitch, yaw - (M_PI / 2.0));
+  transform.setRotation(q);
+
+  // tf::Vector3 origin = transform.getOrigin();
+  // origin.setValue(origin.x() + 0.05, origin.y(), origin.z() + 0.13);
+  // transform.setOrigin(origin);
+  
   static tf::TransformBroadcaster tf_broadcaster;
   tf_broadcaster.sendTransform(tf::StampedTransform(transform, current_frame_time_, map_frame_id_param_, camera_frame_id_param_));
 }
@@ -90,6 +112,40 @@ void Node::PublishPositionAsPoseStamped (cv::Mat position) {
   pose_publisher_.publish(pose_msg);
 }
 
+void Node::PublishMatches(int num_matches)
+{
+  std_msgs::Int32 msg;
+  msg.data = num_matches;
+  matches_publisher_.publish (msg);
+}
+
+// void Node::PublishTrackingState(int state)
+// { std_msgs::Bool tracking;
+//   if (state == 3) {
+//     tracking.data = false;
+
+//   }
+//   else{
+//     tracking.data =true;
+//   }
+//   tracking_state_publisher_.publish (tracking);
+
+// }
+
+void Node::PublishKeyframes(std::vector<ORB_SLAM2::KeyFrame*> key_frames)
+{
+  geometry_msgs::PoseArray msg;
+  for (ORB_SLAM2::KeyFrame* key_frame : key_frames)
+  {
+    tf::Transform grasp_tf = TransformFromMat (key_frame->GetPose());
+    tf::Stamped<tf::Pose> grasp_tf_pose(grasp_tf, current_frame_time_, map_frame_id_param_);
+    geometry_msgs::PoseStamped pose_msg;
+    tf::poseStampedTFToMsg (grasp_tf_pose, pose_msg);
+    msg.poses.push_back(pose_msg.pose);
+    msg.header = pose_msg.header;
+  }
+    key_frames_publisher_.publish(msg);
+}
 
 void Node::PublishRenderedImage (cv::Mat image) {
   std_msgs::Header header;
